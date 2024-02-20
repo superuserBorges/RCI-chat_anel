@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "camada_topologica.h": "c",
+        "stdlib.h": "c"
+    }
+}
