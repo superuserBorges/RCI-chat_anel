@@ -333,6 +333,29 @@ int main(int argc, char *argv[]) {
                     //atualiza o socket do predecessor
                     new_socket_pred = new_socket;
                     temos_pred=1;
+
+                    //Analisa mensagens ROUTE
+                    char route_type[6];
+                    int source, destination;
+                    char path[256]; // Adjust size as needed
+
+                    // Start reading from the buffer
+                    char* line = strtok(buffer, "\n");
+
+                    while (line != NULL) {
+                        if (strncmp(line, "ROUTE", 5) == 0) {
+                            sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
+
+                            printf("Route from node %02d to node %02d is: %s\n", source, destination, path);
+
+                            // Here you can add code to handle the route information
+                            // For example, you might want to update your node's routing table
+                        }
+
+                        // Get the next line from the buffer
+                        line = strtok(NULL, "\n");
+                    }
+                    /////////////////////////////////////////////////////////////////
                     if(pred_saiu==1){
                         send_succ(new_socket_pred, node->sucessor);
                         pred_saiu=-1;
