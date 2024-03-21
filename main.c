@@ -1,6 +1,7 @@
 #include "camada_topologica.h"
 #include "interface_utilizador.h"
 #include "camada_topologica_tcp.h"  
+#include "camada_encaminhamento.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,10 +99,14 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in address;
     fd_set readfds, writefds;
 
+    char tabela_encaminhamento[101][101][55], tabela_curtos[101][2][55], tabela_expedicao[101][2][5];
+
     printf("Bem-vindo ao programa COR! Digite 'help' para ver os comandos disponíveis.\n");
 
     // Configura o socket mestre e inicia o servidor
     setup_master_socket(&tcp_socket, PORT);
+
+    cria_tabelas(tabela_encaminhamento,tabela_curtos,tabela_expedicao);
 
     // Começa o ciclo principal onde tem o select
     while(1) {
@@ -188,9 +193,13 @@ int main(int argc, char *argv[]) {
             printf("Nó não inicializado.\n");
             }
         } else if (strncmp(command, "sr", 2) == 0) {
-        // Implementação do comando 'sr'
+
+        } else if (strncmp(command, "sp", 2) == 0) {
+            sscanf(command, "sp %02d", &id);
+            printf("%s",tabela_curtos[id][1]);
         } else if (strncmp(command, "sf", 2) == 0) {
-            // Implementação do comando 'sf'
+            // Mostra a tabela de expedicao
+            imprimir_expedicao(tabela_expedicao);
         } else if (strncmp(command, "m", 1) == 0) {
             // Implementação do comando 'm'
         } else if (strncmp(command, "NODES", 5) == 0) {
@@ -319,7 +328,7 @@ int main(int argc, char *argv[]) {
                 
                 // Verifica se é uma mensagem PRED
                 if (strncmp(buffer, "PRED", 4) == 0) {
-                    printf("\nENTREI NO PRED\n");
+                    //  printf("\nENTREI NO PRED\n");
                     int new_id;
                     
                     // Analisa a mensagem PRED
@@ -338,7 +347,7 @@ int main(int argc, char *argv[]) {
                     //Analisa mensagens ROUTE
                     char route_type[6];
                     int source, destination;
-                    char path[256]; // Adjust size as needed
+                    char path[64]; // Adjust size as needed
 
                     // Start reading from the buffer
                     char* line = strtok(buffer, "\n");
@@ -347,7 +356,7 @@ int main(int argc, char *argv[]) {
                         if (strncmp(line, "ROUTE", 5) == 0) {
                             sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
 
-                            printf("Route from node %02d to node %02d is: %s\n", source, destination, path);
+                            update_tabelas(node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
 
                             // Here you can add code to handle the route information
                             // For example, you might want to update your node's routing table
@@ -375,6 +384,28 @@ int main(int argc, char *argv[]) {
                     printf("\nVOU LER A MENSAGEM DO MEU PRED\n");
                     buffer[valread] = '\0';
                     printf("Mensagem recebida: %s\n", buffer);  // Imprime a mensagem recebida
+
+                    if (strncmp(buffer, "ROUTE", 5) == 0){
+                        //Analisa mensagens ROUTE
+                        char route_type[6];
+                        int source, destination;
+                        char path[64]; // Adjust size as needed
+
+                        // Start reading from the buffer
+                        char* line = strtok(buffer, "\n");
+
+                        while (line != NULL) {
+                            if (strncmp(line, "ROUTE", 5) == 0) {
+                                sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
+
+                                update_tabelas(node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                            }
+
+                            // Get the next line from the buffer
+                            line = strtok(NULL, "\n");
+                        }
+                        
+                    }
 
                 }else{
                     printf("\nO meu predecessor saiu\n");
@@ -452,6 +483,27 @@ int main(int argc, char *argv[]) {
                         //Criar um novo nó
                         node->second_successor = createNode(new_id, new_ip, new_port);
 
+                    }
+                    if (strncmp(buffer, "ROUTE", 5) == 0){
+                        //Analisa mensagens ROUTE
+                        char route_type[6];
+                        int source, destination;
+                        char path[64]; // Adjust size as needed
+
+                        // Start reading from the buffer
+                        char* line = strtok(buffer, "\n");
+
+                        while (line != NULL) {
+                            if (strncmp(line, "ROUTE", 5) == 0) {
+                                sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
+
+                                update_tabelas(node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                            }
+
+                            // Get the next line from the buffer
+                            line = strtok(NULL, "\n");
+                        }
+                        
                     }
                 }else{
                     printf("\nO meu sucessor saiu\n");
