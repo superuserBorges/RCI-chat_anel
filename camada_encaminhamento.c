@@ -37,39 +37,55 @@ void update_tabelas(Node* node,char tabela_encaminhamento[101][101][55], char ta
     if (strstr(caminho, nodeid) != NULL) {
         printf("Eu sou um dos nós no caminho - inválido\n");
     } else {
-        printf("Não estou no caminho\n");
+        //printf("Não estou no caminho\n");
 
         //concatnacao do meu nó com o caminho
         strcpy(temporario, nodeid);
         strcat(temporario, "-");
         strcat(temporario, caminho);
 
+        printf("o temporario é igual a: %s", temporario);
+
         //Atualizacao da tabela de encaminhamentos
-        sprintf(tabela_encaminhamento[destino + 1][0], "%d | ", destino);
+        sprintf(tabela_encaminhamento[destino + 1][0], "%d", destino);
         sprintf(tabela_curtos[0][origem+1], "%d", origem);
         strcpy(tabela_encaminhamento[destino+1][origem+1],temporario);
 
         //Atualizacao da tabela de caminhos mais curtos
-        if(strcmp(tabela_curtos[destino+1][1],"-1")==0){
-            sprintf(tabela_curtos[destino + 1][0], "%d | ", destino);
-            strcpy(tabela_curtos[destino+1][1],temporario);
+        if(strcmp(tabela_curtos[destino][1],"-1")==0){
+            printf("ainda não ha caminho mais curto\n");
+
+            sprintf(tabela_curtos[destino][0], "%d", destino);
+            strcpy(tabela_curtos[destino][1],temporario);
+
+            printf("o caminho mais curto para o destino %d OU %s é: %s\n", destino,tabela_curtos[destino][0],tabela_curtos[destino][1]);
 
             //A entrada na tabela de mais curtos é diferente da anterior logo anuncia aos vizinhos
             //send_route(node,temporario,destino);
 
             //Atualiza a tabela de expedicao
-            sprintf(tabela_expedicao[destino + 1][0], "%d | ", destino);
-            sprintf(tabela_expedicao[destino + 1][1], "%d", origem);
+            sprintf(tabela_expedicao[destino][0], "%d", destino);
+            sprintf(tabela_expedicao[destino][1], "%d", origem);
+
+            printf("o caminho de espedicao para o destino %s é: %s\n",tabela_expedicao[destino][0],tabela_expedicao[destino][1]);
+
+
 
         }else{
-            if(strcmp(temporario, tabela_curtos[destino+1][1]) < 0){
-                strcpy(tabela_curtos[destino+1][1],temporario);
+            if(strcmp(temporario, tabela_curtos[destino][1]) < 0){
+                printf("já há caminho mais curto\n");
+
+                strcpy(tabela_curtos[destino][1],temporario);
+
+                printf("o caminho mais curto para o destino %d OU %s é: %s\n", destino,tabela_curtos[destino][0],tabela_curtos[destino][1]);
 
                 //A entrada na tabela de mais curtos é diferente da anterior logo anuncia aos vizinhos
                 //send_route(node,temporario,destino);
 
                 //Atualiza a tabela de expedicao
-                sprintf(tabela_expedicao[destino + 1][1], "%d", origem);
+                sprintf(tabela_expedicao[destino][1], "%d", origem);
+
+                printf("o caminho de espedicao para o destino OU %s é: %s\n",tabela_expedicao[destino][0],tabela_expedicao[destino][1]);
             } 
         }
     }
