@@ -319,6 +319,7 @@ int main(int argc, char *argv[]) {
                 
                 // Verifica se é uma mensagem PRED
                 if (strncmp(buffer, "PRED", 4) == 0) {
+                    printf("\nENTREI NO PRED\n");
                     int new_id;
                     
                     // Analisa a mensagem PRED
@@ -371,6 +372,7 @@ int main(int argc, char *argv[]) {
                 char buffer[1024];
                 int valread;
                 if ((valread = read(new_socket_pred, buffer,1024 - 1)) > 0) {
+                    printf("\nVOU LER A MENSAGEM DO MEU PRED\n");
                     buffer[valread] = '\0';
                     printf("Mensagem recebida: %s\n", buffer);  // Imprime a mensagem recebida
 
