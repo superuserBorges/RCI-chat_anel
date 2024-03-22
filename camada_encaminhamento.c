@@ -72,7 +72,8 @@ void update_tabelas(Node* node,char tabela_encaminhamento[101][101][55], char ta
 
 
         }else{
-            if(strcmp(temporario, tabela_curtos[destino][1]) < 0){
+            printf("\no temp é: %s e o tab é %s\n",temporario,tabela_curtos[destino][1]);
+            if(strlen(temporario) < strlen(tabela_curtos[destino][1])){
                 printf("já há caminho mais curto\n");
 
                 strcpy(tabela_curtos[destino][1],temporario);
@@ -111,29 +112,17 @@ void update_tabelas(Node* node,char tabela_encaminhamento[101][101][55], char ta
 //     }
 // }
 
-void imprimir_encaminhamento(char tabela_encaminhamento[101][101][55]){
-    int i,j;
+void imprimir_encaminhamento(int destino, char tabela_encaminhamento[101][101][55]){
+    int i;
     for(i=0; i<101; i++){
-        if(strcmp(tabela_encaminhamento[i][0],"-1")!=0){
-            for(j=0; j<101; j++){
-                if(strcmp(tabela_encaminhamento[i][j],"-1")!=0){
-                    printf(" %s |",tabela_encaminhamento[i][j]);
-                }
-            }
-            printf("\n");
+        if(strcmp(tabela_encaminhamento[destino+1][i],"-1")!=0){
+            printf(" %s |",tabela_encaminhamento[0][i]);
         }
     }
-}
-
-void imprimir_curtos(char tabela_curtos[101][2][55]){
-    int i,j;
+    printf("\n");
     for(i=0; i<101; i++){
-        if(strcmp(tabela_curtos[i][0],"-1")!=0){
-            for(j=0; j<2; j++){
-
-                printf(" %s |",tabela_curtos[i][j]);
-            }
-            printf("\n");
+        if(strcmp(tabela_encaminhamento[destino+1][i],"-1")!=0){
+            printf(" %s |",tabela_encaminhamento[destino][i]);
         }
     }
 }
@@ -150,3 +139,30 @@ void imprimir_expedicao(char tabela_expedicao[101][2][5]){
         }
     }
 }
+
+// void imprimir_encaminhamento(char tabela_encaminhamento[101][101][55]){
+//     int i,j;
+//     for(i=0; i<101; i++){
+//         if(strcmp(tabela_encaminhamento[i][0],"-1")!=0){
+//             for(j=0; j<101; j++){
+//                 if(strcmp(tabela_encaminhamento[i][j],"-1")!=0){
+//                     printf(" %s |",tabela_encaminhamento[i][j]);
+//                 }
+//             }
+//             printf("\n");
+//         }
+//     }
+// }
+
+// void imprimir_curtos(char tabela_curtos[101][2][55]){
+//     int i,j;
+//     for(i=0; i<101; i++){
+//         if(strcmp(tabela_curtos[i][0],"-1")!=0){
+//             for(j=0; j<2; j++){
+
+//                 printf(" %s |",tabela_curtos[i][j]);
+//             }
+//             printf("\n");
+//         }
+//     }
+// }

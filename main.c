@@ -193,10 +193,12 @@ int main(int argc, char *argv[]) {
             printf("Nó não inicializado.\n");
             }
         } else if (strncmp(command, "sr", 2) == 0) {
+            sscanf(command, "sr %d", &id);
+            imprimir_encaminhamento(id,tabela_encaminhamento);
 
         } else if (strncmp(command, "sp", 2) == 0) {
-            sscanf(command, "sp %02d", &id);
-            printf("%s",tabela_curtos[id][1]);
+            sscanf(command, "sp %d", &id);
+            printf("O caminho para %d é: %s",id,tabela_curtos[id][1]);
         } else if (strncmp(command, "sf", 2) == 0) {
             // Mostra a tabela de expedicao
             imprimir_expedicao(tabela_expedicao);
