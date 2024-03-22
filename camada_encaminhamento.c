@@ -25,11 +25,13 @@ void cria_tabelas(char tabela_encaminhamento[101][101][55], char tabela_curtos[1
 }
 
 //Quando recebe um ROUTE
-void update_tabelas(int socket_pred, int socket_suc, Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5], int origem, int destino, char caminho[64]) {
+void update_tabelas(char mensagens_guardadas[20][512], int temos_pred,int socket_pred, int socket_suc, Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5], int origem, int destino, char caminho[64]) {
     //Quando recebo um route será sempre de um vizinho seja pred,suc ou corda
     //char input[] = "ROUTE 30 10 30-8-10\n"; // Input string
     char temporario[55]; // Variables to store parameters
     char nodeid[3];
+    char buffer[512];
+    int aux=0;
 
     //passar de int para string
     sprintf(nodeid, "%d", node->id);
@@ -61,8 +63,14 @@ void update_tabelas(int socket_pred, int socket_suc, Node* node,char tabela_enca
             //printf("o caminho mais curto para o destino %d OU %s é: %s\n", destino,tabela_curtos[destino][0],tabela_curtos[destino][1]);
 
             //A entrada na tabela de mais curtos é diferente da anterior logo anuncia aos vizinhos
-            send_route(socket_pred, node->id,temporario,destino);
-            send_route(socket_suc, node->id,temporario,destino);
+            sprintf(buffer, "ROUTE %d %d %s", node->id, destino, temporario);
+            if(temos_pred==1){
+                send_route(socket_pred, buffer);
+            }else{
+                strcpy(mensagens_guardadas[aux], buffer);
+                aux++;
+            }
+            send_route(socket_suc, buffer);
 
             //Atualiza a tabela de expedicao
             sprintf(tabela_expedicao[destino][0], "%d", destino);
@@ -79,8 +87,14 @@ void update_tabelas(int socket_pred, int socket_suc, Node* node,char tabela_enca
                 //printf("o caminho mais curto para o destino %d OU %s é: %s\n", destino,tabela_curtos[destino][0],tabela_curtos[destino][1]);
 
                 //A entrada na tabela de mais curtos é diferente da anterior logo anuncia aos vizinhos
-                send_route(socket_pred, node->id,temporario,destino);
-                send_route(socket_suc, node->id,temporario,destino);
+                sprintf(buffer, "ROUTE %d %d %s", node->id, destino, temporario);
+                if(temos_pred==1){
+                    send_route(socket_pred, buffer);
+                }else{
+                    strcpy(mensagens_guardadas[aux], buffer);
+                    aux++;
+                }
+                send_route(socket_suc, buffer);
 
                 //Atualiza a tabela de expedicao
                 sprintf(tabela_expedicao[destino][1], "%d", origem);
@@ -92,10 +106,8 @@ void update_tabelas(int socket_pred, int socket_suc, Node* node,char tabela_enca
     
 }
 
-//envia um route especificp
-void send_route(int fd, int id, char caminho[55], int destino){
-    char buffer[1024];
-    sprintf(buffer, "ROUTE %d %d %s", id, destino, caminho);
+//envia um route especifico
+void send_route(int fd, char buffer[512]){
     // Imprime a mensagem que será enviada
     printf("Mensagem a ser enviada: %s\n", buffer);
     int n = send(fd, buffer, strlen(buffer), 0);
@@ -153,6 +165,7 @@ void elimina_vizinho(int fd, int id, Node* node,char tabela_encaminhamento[101][
     char nodeid[2], tempor[100], viz[2];
     int aux=0, vizinho=-1;
     int i,j;
+    char buffer[512];
 
     //passar de int para string
     sprintf(nodeid, "%d", node->id);
@@ -188,7 +201,8 @@ void elimina_vizinho(int fd, int id, Node* node,char tabela_encaminhamento[101][
                 strcpy(tabela_curtos[i-1][1],tempor);
 
                 //manda para os vizinhos exceto o que entrou agora
-                send_route(fd, id ,tempor,i-1);
+                sprintf(buffer, "ROUTE %d %d %s", node->id, i-1, tempor);
+                send_route(fd, buffer);
 
                 sprintf(viz, "%d", vizinho);
                 strcpy(tabela_expedicao[i-1][1],viz);
@@ -196,7 +210,8 @@ void elimina_vizinho(int fd, int id, Node* node,char tabela_encaminhamento[101][
                 strcpy(tabela_curtos[i-1][1],tempor);
 
                 //manda para os vizinhos exceto o que entrou agora
-                send_route(fd, id ,tempor,i-1);
+                sprintf(buffer, "ROUTE %d %d %s", node->id, i-1, tempor);
+                send_route(fd, buffer);
 
                 sprintf(viz, "%d", vizinho);
                 strcpy(tabela_expedicao[i-1][1],viz);

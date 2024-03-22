@@ -101,6 +101,12 @@ int main(int argc, char *argv[]) {
 
     char tabela_encaminhamento[101][101][55], tabela_curtos[101][2][55], tabela_expedicao[101][2][5];
 
+    char mensagens_guardadas[20][512];
+    int k;
+    for (k =0; k<20;k++){
+        strcpy(mensagens_guardadas[k],"-1");
+    }
+
     printf("Bem-vindo ao programa COR! Digite 'help' para ver os comandos disponíveis.\n");
 
     // Configura o socket mestre e inicia o servidor
@@ -317,7 +323,7 @@ int main(int argc, char *argv[]) {
                 // Verifica se é uma mensagem PRED
                 if (strncmp(buffer, "PRED", 4) == 0) {
                     //  printf("\nENTREI NO PRED\n");
-                    int new_id;
+                    int new_id,i;
                     
                     // Analisa a mensagem PRED
                     sscanf(buffer, "PRED %d", &new_id);
@@ -330,6 +336,12 @@ int main(int argc, char *argv[]) {
 
                     //atualiza o socket do predecessor
                     new_socket_pred = new_socket;
+                    for(i=0;i<20;i++){
+                        if(strcmp(mensagens_guardadas[i],"-1")==0){
+                            send_route(new_socket_pred,mensagens_guardadas[i]);
+                            strcpy(mensagens_guardadas[i],"-1");
+                        }
+                    }
                     temos_pred=1;
 
                     //Analisa mensagens ROUTE
@@ -344,7 +356,7 @@ int main(int argc, char *argv[]) {
                         if (strncmp(line, "ROUTE", 5) == 0) {
                             sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
 
-                            update_tabelas(new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                            update_tabelas(mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
 
                             // Here you can add code to handle the route information
                             // For example, you might want to update your node's routing table
@@ -386,7 +398,7 @@ int main(int argc, char *argv[]) {
                             if (strncmp(line, "ROUTE", 5) == 0) {
                                 sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
 
-                                update_tabelas(new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                                update_tabelas(mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                             }
 
                             // Get the next line from the buffer
@@ -491,7 +503,7 @@ int main(int argc, char *argv[]) {
                             if (strncmp(line, "ROUTE", 5) == 0) {
                                 sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
 
-                                update_tabelas(new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                                update_tabelas(mensagens_guardadas,temos_pred, new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                             }
 
                             // Get the next line from the buffer
