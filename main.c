@@ -287,31 +287,17 @@ int main(int argc, char *argv[]) {
                         temos_pred=1;
                         temos_suc=1;
 
-                    }else if((node->sucessor!=node) && (node->second_successor==node)){
-
-                        printf("----ESTAMOS DOIS---\n");
-                        
-                        // Envia uma mensagem a informar ao novo nó do seu segundo-sucessor
-                        send_succ(new_socket, node->sucessor);
-
-                        //Atualiza o st
-                        node->predecessor = createNode(new_id, new_ip, new_port);
-
-                        //Envia para o predecessor o Entry
-                        printf("\nO MEU SOCKET PRED É: %d\n",new_socket_pred);
-                        send_entry(new_socket_pred, node->predecessor);
-
-                        //Atualiza a nova socket com o predecessor
-                        //new_socket_suc=new_socket_pred;
-                        new_socket_pred=new_socket;
-                        temos_pred=1;
-                        temos_suc=1;
                     }
-                    // 
                     else{
 
+                        //Atualiza as tabelas
+                        elimina_vizinho(new_socket_suc, node->id,node->predecessor, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+
                         // Envia uma mensagem a informar ao novo nó do seu segundo-sucessor
-                        send_succ(new_socket, node->sucessor);
+                        char* mensagem = acumula_routes(node, tabela_curtos);
+
+                        send_succ1(new_socket, node->sucessor, mensagem);
+                        free(mensagem);
 
                         //Atualiza o st
                         node->predecessor = createNode(new_id, new_ip, new_port);
@@ -358,7 +344,7 @@ int main(int argc, char *argv[]) {
                         if (strncmp(line, "ROUTE", 5) == 0) {
                             sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
 
-                            update_tabelas(node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                            update_tabelas(new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
 
                             // Here you can add code to handle the route information
                             // For example, you might want to update your node's routing table
@@ -400,7 +386,7 @@ int main(int argc, char *argv[]) {
                             if (strncmp(line, "ROUTE", 5) == 0) {
                                 sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
 
-                                update_tabelas(node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                                update_tabelas(new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                             }
 
                             // Get the next line from the buffer
@@ -452,17 +438,23 @@ int main(int argc, char *argv[]) {
                         // Imprime as informações do novo nó
                         printf("Informações de um novo cliente: id=%02d, ip=%s, port=%s\n", new_id, new_ip, new_port);
 
+                        elimina_vizinho(new_socket_pred, node->id, node->sucessor, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+
                         //Criar um novo nó
                         node->sucessor = createNode(new_id, new_ip, new_port);
 
                         // Envia uma mensagem a informar ao predecessor do seu segundo sucessor
+                        //char mensagem[500] = "";
                         send_succ(new_socket_pred, node->sucessor);
 
                         // Conexão TCP com o novo nó de entrada na porta dele
                         int new_socket_tcp = cliente_tcp(node, new_ip, new_port);
 
                         // Envia uma mensagem PRED para a nova porta tcp estabelecida
-                        send_pred(new_socket_tcp, node);
+                        char* mensagem = acumula_routes(node, tabela_curtos);
+                        send_pred1(new_socket_tcp, node, mensagem);
+
+                        free(mensagem);
 
                         // Define como a socket com o sucessor a new_socket_tcp
                         new_socket_suc = new_socket_tcp;
@@ -499,7 +491,7 @@ int main(int argc, char *argv[]) {
                             if (strncmp(line, "ROUTE", 5) == 0) {
                                 sscanf(line, "%s %d %d %s", route_type, &source, &destination, path);
 
-                                update_tabelas(node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                                update_tabelas(new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                             }
 
                             // Get the next line from the buffer

@@ -15,11 +15,12 @@
 #include "camada_topologica.h"
 
 void cria_tabelas(char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55], char tabela_expedicao[101][2][5]);
-void update_tabelas(Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5], int origem, int destino, char caminho[64]);
-// void send_route(Node* node, char caminho[55], int destino);
+void update_tabelas(int socket_pred, int socket_suc, Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5], int origem, int destino, char caminho[64]);
+void send_route(int fd, int id, char caminho[55], int destino);
+char* acumula_routes(Node* node,char tabela_curtos[101][2][55]);
 // void send_all_routes(Node* node,char tabela_curtos[101][2][55]);
 void imprimir_encaminhamento(int destino, char tabela_encaminhamento[101][101][55]);
 //void imprimir_curtos(char tabela_curtos[101][2][55]);
 void imprimir_expedicao(char tabela_expedicao[101][2][5]);
-
+void elimina_vizinho(int fd, int id, Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5]);
 #endif // CANADA_ENCAMINHAMENTO_H
