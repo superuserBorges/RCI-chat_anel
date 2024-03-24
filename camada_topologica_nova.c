@@ -134,7 +134,7 @@ void registerNode(Node* node, int ring, char* IP, char* TCP, char* user_input) {
                 printf("Informações do segundo sucessor: id=%02d, ip=%s, port=%s\n", new_id, new_ip, new_port);
 
                 sprintf(buffer1, "ROUTE %d %d %d\n", node->id, node->id, node->id);
-                send_route(porta_tcp,buffer);
+                send_route(porta_tcp,buffer1);
 
                 //Depois passa para o main, parte servidor, para aceitar a nova conexão e receber o PRED.
             }

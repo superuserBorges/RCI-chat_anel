@@ -183,7 +183,7 @@ void elimina_vizinho(int fd, int id, Node* node,char tabela_encaminhamento[101][
             if(strcmp(tabela_expedicao[i-1][1],nodeid)==0){
                 strcpy(tabela_curtos[i-1][1],"-1");
             }
-            for(j=0; j<101; j++){
+            for(j=1; j<101; j++){
                 if(strcmp(tabela_encaminhamento[i][j],"-1")!=0){
                     if(aux==0){
                         strcpy(tempor,tabela_encaminhamento[i][j]);
@@ -244,7 +244,7 @@ void elimina_no(int socket_pred, int socket_suc, int meu_id, int id_saida,char t
         vizinho=-1;
         if(strcmp(tabela_encaminhamento[i][0],"-1")!=0){
             
-            for(j=0; j<101; j++){
+            for(j=1; j<101; j++){
                 if(strcmp(tabela_encaminhamento[i][j],"-1")!=0){
                     if(aux==0){
                         strcpy(tempor,tabela_encaminhamento[i][j]);
