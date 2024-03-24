@@ -99,6 +99,7 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in address;
     fd_set readfds, writefds;
     int numero;
+    int aux123=0;
 
     char tabela_encaminhamento[101][101][55], tabela_curtos[101][2][55], tabela_expedicao[101][2][5];
 
@@ -393,7 +394,7 @@ int main(int argc, char *argv[]) {
                             if (numero==3){
                                 elimina_no(new_socket_pred,new_socket_suc ,node->id, destination, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
                             }else if (numero ==4){
-                                update_tabelas(mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                                update_tabelas(-1,mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                             }
                         }
 
@@ -436,7 +437,7 @@ int main(int argc, char *argv[]) {
                                 if (numero==3){
                                     elimina_no(new_socket_pred,new_socket_suc ,node->id, destination, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
                                 }else if (numero ==4){
-                                    update_tabelas(mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                                    update_tabelas(-1,mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                                 }
                             }
                             // Get the next line from the buffer
@@ -548,7 +549,7 @@ int main(int argc, char *argv[]) {
                                 if (numero==3){
                                     elimina_no(new_socket_pred,new_socket_suc ,node->id, destination, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
                                 }else if (numero ==4){
-                                    update_tabelas(mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                                    update_tabelas(aux123,mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                                 }
                             }
 

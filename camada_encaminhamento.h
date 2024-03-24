@@ -15,7 +15,7 @@
 #include "camada_topologica.h"
 
 void cria_tabelas(char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55], char tabela_expedicao[101][2][5]);
-void update_tabelas(char mensagens_guardadas[20][512], int temos_pred,int socket_pred, int socket_suc, Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5], int origem, int destino, char caminho[64]);
+void update_tabelas(int aux123, char mensagens_guardadas[20][512], int temos_pred,int socket_pred, int socket_suc, Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5], int origem, int destino, char caminho[64]);
 void send_route(int fd, char buffer[512]);
 void acumula_routes(int fd, Node* node,char tabela_curtos[101][2][55]);
 // void send_all_routes(Node* node,char tabela_curtos[101][2][55]);

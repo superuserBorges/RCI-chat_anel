@@ -25,13 +25,12 @@ void cria_tabelas(char tabela_encaminhamento[101][101][55], char tabela_curtos[1
 }
 
 //Quando recebe um ROUTE
-void update_tabelas(char mensagens_guardadas[20][512], int temos_pred,int socket_pred, int socket_suc, Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5], int origem, int destino, char caminho[64]) {
+void update_tabelas(int aux123,char mensagens_guardadas[20][512], int temos_pred,int socket_pred, int socket_suc, Node* node,char tabela_encaminhamento[101][101][55], char tabela_curtos[101][2][55],char tabela_expedicao[101][2][5], int origem, int destino, char caminho[64]) {
     //Quando recebo um route será sempre de um vizinho seja pred,suc ou corda
     //char input[] = "ROUTE 30 10 30-8-10\n"; // Input string
     char temporario[55]; // Variables to store parameters
     char nodeid[3];
     char buffer[1024];
-    int aux=0;
 
     //passar de int para string
     sprintf(nodeid, "%d", node->id);
@@ -67,8 +66,8 @@ void update_tabelas(char mensagens_guardadas[20][512], int temos_pred,int socket
             if(temos_pred==1){
                 send_route(socket_pred, buffer);
             }else{
-                strcpy(mensagens_guardadas[aux], buffer);
-                aux++;
+                strcpy(mensagens_guardadas[aux123], buffer);
+                aux123++;
             }
             send_route(socket_suc, buffer);
 
@@ -91,8 +90,8 @@ void update_tabelas(char mensagens_guardadas[20][512], int temos_pred,int socket
                 if(temos_pred==1){
                     send_route(socket_pred, buffer);
                 }else{
-                    strcpy(mensagens_guardadas[aux], buffer);
-                    aux++;
+                    strcpy(mensagens_guardadas[aux123], buffer);
+                    aux123++;
                 }
                 send_route(socket_suc, buffer);
 
