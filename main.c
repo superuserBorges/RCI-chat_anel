@@ -289,6 +289,8 @@ int main(int argc, char *argv[]) {
                         // Envia uma mensagem PRED para a nova porta tcp estabelecida
                         send_pred(new_socket_tcp, node);
 
+                        acumula_routes(new_socket_tcp, node, tabela_curtos);
+
                         // Atualizar o show topology
                         //node->sucessor = createNode(new_id, new_ip, new_port);
 
@@ -364,6 +366,10 @@ int main(int argc, char *argv[]) {
 
                     //atualiza o socket do predecessor
                     new_socket_pred = new_socket;
+
+                    sprintf(buffer, "ROUTE %d %d %d\n", node->id, node->id, node->id);
+                    send_route(new_socket_pred,buffer);
+
                     for(i=0;i<20;i++){
                         if(strcmp(mensagens_guardadas[i],"-1")!=0){
                             send_route(new_socket_pred,mensagens_guardadas[i]);
