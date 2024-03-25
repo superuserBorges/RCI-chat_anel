@@ -252,6 +252,10 @@ int main(int argc, char *argv[]) {
                 if(node != NULL) {
                     node->ring = ring; // Para depois poder usar a corda
                 }
+                char nodeid[3];
+                sprintf(nodeid, "%d", node->id);
+                strcpy(tabela_curtos[node->id][0],nodeid);
+                strcpy(tabela_curtos[node->id][1],nodeid);
             }
         }else if (strncmp(command, "dj", 2) == 0) {
             int id, succid;
@@ -263,6 +267,10 @@ int main(int argc, char *argv[]) {
                 printf("Uso: dj <id> <succid> <succIP> <succTCP>\n");
             } else {
                 node = direct_join(id, succid, succIP, succTCP);
+                char nodeid[3];
+                sprintf(nodeid, "%d", node->id);
+                strcpy(tabela_curtos[node->id][0],nodeid);
+                strcpy(tabela_curtos[node->id][1],nodeid);
             }
         } else if (strncmp(command, "c", 1) == 0) {
             if (node == NULL) {
@@ -351,25 +359,25 @@ int main(int argc, char *argv[]) {
                 }
 
 
-                  // Verifica se é uma mensagem de corda
-                    if (strncmp(buffer, "CHORD", 5) == 0) {
-                        int new_id;
-                        
-                        // Analisa a mensagem CHORD
-                        sscanf(buffer, "CHORD %d", &new_id);
-                                                    
-                        // Cria um novo nó para a corda
-                        Node* new_node = createNode(new_id, inet_ntoa(address.sin_addr), port_char);
+                // Verifica se é uma mensagem de corda
+                if (strncmp(buffer, "CHORD", 5) == 0) {
+                    int new_id;
+                    
+                    // Analisa a mensagem CHORD
+                    sscanf(buffer, "CHORD %d", &new_id);
+                                                
+                    // Cria um novo nó para a corda
+                    Node* new_node = createNode(new_id, inet_ntoa(address.sin_addr), port_char);
 
-                        // Adiciona o nó à lista de nós recebidos do servidor (cordas)
-                        add_client(new_socket, new_node);
-                        
-                        printf("O nó %02d conseguiu estabelecer uma corda consigo de forma bem-sucedida.\n", new_id);
+                    // Adiciona o nó à lista de nós recebidos do servidor (cordas)
+                    add_client(new_socket, new_node);
+                    
+                    printf("O nó %02d conseguiu estabelecer uma corda consigo de forma bem-sucedida.\n", new_id);
 
-                        acumula_routes(new_socket, node, tabela_curtos);
+                    acumula_routes(new_socket, node, tabela_curtos);
 
-                        temos_corda++;  // Incrementa o número de cordas
-                    }
+                    temos_corda++;  // Incrementa o número de cordas
+                }
                 
                 // Verifica se é uma mensagem de entrada
                 if (strncmp(buffer, "ENTRY", 5) == 0) {
@@ -381,7 +389,7 @@ int main(int argc, char *argv[]) {
                     sscanf(buffer, "ENTRY %d %s %s", &new_id, new_ip, new_port);
                                             
                     //Se está a entrar o segundo nó
-                    if(node->sucessor==node){
+                    if(node->sucessor->id==node->id){
 
                         node->predecessor = createNode(new_id, new_ip, new_port);
                         node->sucessor = createNode(new_id, new_ip, new_port);
