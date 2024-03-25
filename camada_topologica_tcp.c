@@ -1,16 +1,14 @@
 #include "camada_topologica_tcp.h"
 
-
 int cliente_tcp(Node* node,char* j_ip,char* j_port) {
     int fd;
     struct addrinfo hints, *res;
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1) {
-        perror("socket");
-        exit(EXIT_FAILURE);
+        perror("socket tcp");
+        return -1;  // Retorna -1 em caso de erro
     }
-    printf("Socket criado.\n");
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
@@ -19,16 +17,15 @@ int cliente_tcp(Node* node,char* j_ip,char* j_port) {
     int errcode = getaddrinfo(j_ip, j_port, &hints, &res);
     if (errcode != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(errcode));
-        exit(EXIT_FAILURE);
+        return -1;  // Retorna -1 em caso de erro
     }
-    printf("getaddrinfo executado com sucesso.\n");
 
     if (connect(fd, res->ai_addr, res->ai_addrlen) == -1) {
         perror("connect");
-        exit(EXIT_FAILURE);
+        return -1;  // Retorna -1 em caso de erro
     }
     // Conectado ao servidor.
-    printf("Conectado ao servidor.\n");
+    printf("\n------Conectado ao anel------\n");
 
     freeaddrinfo(res);
     return fd;
@@ -37,41 +34,43 @@ int cliente_tcp(Node* node,char* j_ip,char* j_port) {
 void send_entry(int fd, Node* node){
     char buffer[1024];
     sprintf(buffer, "ENTRY %02d %s %s\n", node->id, node->ip, node->tcp);
-    // Imprime a mensagem que será enviada
-    printf("Mensagem a ser enviada para o socket %d: %s\n",fd, buffer);
     int n = send(fd, buffer, strlen(buffer), 0);
     if (n == -1) {
-        perror("send");
+        perror("send entry");
         exit(EXIT_FAILURE);
     }
-    printf("Mensagem enviada.\n");
 }
 
 void send_succ(int fd, Node* node){
     char buffer[1024];
     sprintf(buffer, "SUCC %02d %s %s\n", node->id, node->ip, node->tcp);
-    // Imprime a mensagem que será enviada
-    printf("Mensagem a ser enviada: %s\n", buffer);
     int n = send(fd, buffer, strlen(buffer), 0);
     if (n == -1) {
-        perror("send");
+        perror("send succ");
         exit(EXIT_FAILURE);
     }
-    printf("Mensagem enviada!\n");
 }
 
 void send_pred(int fd, Node* node){
     char buffer[1024];
     sprintf(buffer, "PRED %02d\n", node->id);
-    // Imprime a mensagem que será enviada
-    printf("Mensagem a ser enviada: %s\n", buffer);
     int n = send(fd, buffer, strlen(buffer), 0);
     if (n == -1) {
-        perror("send");
+        perror("send pred");
         exit(EXIT_FAILURE);
     }
-    printf("Mensagem enviada.\n");
 }
+
+void send_chord(int fd, Node* node){
+    char buffer[1024];
+    sprintf(buffer, "CHORD %02d\n", node->id);
+    int n = send(fd, buffer, strlen(buffer), 0);
+    if (n == -1) {
+        perror("send corda");
+        exit(EXIT_FAILURE);
+    }
+}
+
 
 void removeNode(Node** node_to_remove_ptr) {
     Node* node_to_remove = *node_to_remove_ptr;

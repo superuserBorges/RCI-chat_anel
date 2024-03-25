@@ -2,20 +2,22 @@
 #include "interface_utilizador.h"
 #include "camada_topologica_tcp.h"  
 #include "camada_encaminhamento.h"
+#include "camada_chat.h"
+#include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <sys/time.h> // Para struct timeval
+#include <sys/time.h>
 #include <errno.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/select.h>
 #include <netdb.h>
+#include <signal.h>
 
-#define MAX_CLIENTS 20
 
 // Variaveis Globais
 Node* node = NULL; 
@@ -25,13 +27,13 @@ char* TCP_escolhido;
 
 
 void print_help() {
-    printf("Comandos disponíveis:\n");
+    printf("\nComandos disponíveis:\n");
     printf("  join (j) ring id - Entrada de um nó com identificador id no anel ring.\n");
     printf("  direct join (dj) id succid succIP succTCP - Entrada de um nó com identificador id diretamente num anel, sem consulta ao servidor de nós.\n");
     printf("  chord (c) - Estabelecimento de uma corda para um nó do anel que não o sucessor ou o predecessor. Cada nó estabelece no máximo uma corda.\n");
     printf("  remove chord (rc) - Eliminação da corda previamente estabelecida.\n"); 
     printf("  show topology (st) - Mostra a topologia atual.\n");
-    printf("  show routing table (sr) dest - Mostra o caminho mais curto de um nó para o destino dest.\n");
+    printf("  show routing table (sr) dest - Mostra o caminho mais curto de um nó para o destino.\n");
     printf("  show forwarding (sf) - Mostra a tabela de expedição de um nó.\n");
     printf("  message (m) dest message - Envio da mensagem message ao nó dest.\n");
     printf("  leave (l) - Saída do nó do anel.\n");
@@ -40,6 +42,7 @@ void print_help() {
     // Adicionar mais comandos aqui
 }
 
+// Função para configurar o socket mestre e iniciar o servidor
 void setup_master_socket(int *tcp_socket, int PORT) {
     struct sockaddr_in address;
     int opt = 1;
@@ -66,20 +69,38 @@ void setup_master_socket(int *tcp_socket, int PORT) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
+    
+    if (DEBUG) {
     printf("Listening on port %d...\n", PORT);
+    }
 
     // Especifica o número máximo de conexões pendentes para o socket mestre
     if (listen(*tcp_socket, 3) < 0) {
         perror("listen");
         exit(EXIT_FAILURE);
     }
-
+    if (DEBUG) {
     puts("Waiting for connections ...");
+    }
 }
+
+// Cordas Recebidas
+ClientInfo* clients[MAX_CLIENTS] = {0};
 
 int main(int argc, char *argv[]) {
     if(argc != 5) {
-        printf("Uso: %s IP TCP regIP regUDP\n", argv[0]);
+        printf("\nModo de iniciar: %s <Endereço IP> <Porta TCP> <Endereço IP do servidor> <Porta UDP do servidor>\n", argv[0]);
+        printf("Nota: O endereço IP deve ser fornecido no formato numérico (por exemplo, 192.168.1.1).\n");
+        return 1;
+    }
+
+    //Protect the application against SIGPIPE signals.
+    struct sigaction act;
+    memset(&act,0,sizeof act);
+    act.sa_handler=SIG_IGN;
+
+    if(sigaction(SIGPIPE,&act,NULL)<0){
+        perror("SIGPIPE");
         return 1;
     }
 
@@ -94,10 +115,10 @@ int main(int argc, char *argv[]) {
     char command[1024];
     int PORT = atoi(TCP_escolhido);
     int tcp_socket, addrlen, activity, max_sd, new_socket_pred, new_socket_suc; 
-    int temos_pred = -1, temos_suc =-1, pred_saiu =-1;
-    int new_socket = -1;
+    int temos_pred = -1, temos_suc =-1, pred_saiu = -1, new_socket = -1, temos_corda = 0;
     struct sockaddr_in address;
     fd_set readfds, writefds;
+
     int numero;
     int aux123=0;
 
@@ -109,7 +130,8 @@ int main(int argc, char *argv[]) {
         strcpy(mensagens_guardadas[k],"-1");
     }
 
-    printf("Bem-vindo ao programa COR! Digite 'help' para ver os comandos disponíveis.\n");
+    printf("\nBem-vindo ao ChatonRing (COR), a sua plataforma de comunicação em anel. Aqui, você pode se conectar e comunicar com outros nós de uma maneira eficiente e divertida. Se precisar de ajuda a qualquer momento, basta digitar 'help' para ver a lista de comandos disponíveis. Divirta-se!\n");
+
 
     // Configura o socket mestre e inicia o servidor
     setup_master_socket(&tcp_socket, PORT);
@@ -131,7 +153,6 @@ int main(int argc, char *argv[]) {
         FD_SET(tcp_socket, &readfds); // Adiciona o socket TCP ao conjunto
         FD_SET(STDIN_FILENO, &readfds); // Adiciona a leitura do teclado ao conjunto
 
-
         if (temos_pred==1){
             FD_SET(new_socket_pred, &readfds);  // Adiciona o socket do predecessor ao conjunto
         }
@@ -144,7 +165,7 @@ int main(int argc, char *argv[]) {
 
         // Compare STDIN_FILENO with max_sd and assigns larger value to max_sd
         if(STDIN_FILENO > max_sd)
-            max_sd = STDIN_FILENO; // STDIN_FILENO is greater
+            max_sd = STDIN_FILENO; 
 
         // Compare new_socket_predecessor with max_sd and assigns larger value to max_sd
         if(new_socket_pred > max_sd)
@@ -152,18 +173,37 @@ int main(int argc, char *argv[]) {
 
         if(new_socket_suc > max_sd)
             max_sd = new_socket_suc;
-
+        
+        if (temos_corda > 0){
+            for (int i = 0; i < MAX_CLIENTS; i++) {
+                if (clients[i]) {
+                    FD_SET(clients[i]->socket_fd, &readfds);
+                    if (clients[i]->socket_fd > max_sd) {
+                        max_sd = clients[i]->socket_fd;
+                    }
+                }
+            }
+        }
+        
         // Espera por uma atividade em um dos sockets, o timeout é NULL, então espera indefinidamente
         activity = select(max_sd + 1, &readfds, &writefds, NULL, NULL);
 
-        if ((activity < 0) && (errno!=EINTR)) {
-            printf("select error");
+        // Verifica se algo aconteceu no select
+        if ((activity < 0) && (errno != EINTR)) {
+            printf("select error: %s\n", strerror(errno));
         }
 
         // Se algo aconteceu no teclado, então é uma entrada do utilizador
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
         // Lê a entrada do teclado
         fgets(command, sizeof(command), stdin);
+        // Verifica se o último caractere lido não é uma nova linha
+        if (command[strlen(command) - 1] != '\n') {
+            // Limpa o buffer de entrada
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) { }
+        }
+
         printf("Keyboard input: %s", command);
 
         if (strncmp(command, "l", 1) == 0) {
@@ -172,31 +212,70 @@ int main(int argc, char *argv[]) {
                 leave(node, ring);
                 close(new_socket_pred);
                 close(new_socket_suc);
+                if (node->corda != NULL) {
+                // Fecha o socket
+                close(node->corda->corda_socket_fd);
+                // Libera a memória do nó da corda
+                free(node->corda);
+                node->corda = NULL;
+                temos_corda=0;}
                 new_socket_pred=-1;
                 new_socket_suc=-1;
                 temos_pred=-1;
                 temos_suc=-1;
+                free(node);
+                node = NULL;
             } else {
                 printf("Nó não inicializado.\n");
             }
         } else if (strncmp(command, "help", 4) == 0) {
             print_help();
         } else if (strncmp(command, "j", 1) == 0) {
-            sscanf(command, "j %03d %02d", &ring, &id);
-            node = join(ring, id, IP, TCP_escolhido);
-            char nodeid[3];
-            sprintf(nodeid, "%d", node->id);
-            strcpy(tabela_curtos[node->id][0],nodeid);
-            strcpy(tabela_curtos[node->id][1],nodeid);
-        } else if (strncmp(command, "dj", 2) == 0) {
+            char ring_str[4], id_str[3];
+            int num_args = sscanf(command, "j %s %s", ring_str, id_str);
+            // Verifica se ambos os parâmetros foram fornecidos
+            if (num_args < 2) {
+                printf("Erro: Não foram fornecidos argumentos suficientes para o comando 'j'.\n");
+                printf("Uso: j <ring> <id>\n");
+            } else if (strlen(ring_str) > 3 || strlen(id_str) > 2) {
+                printf("Erro: Valores inválidos fornecidos para 'ring' ou 'id'.\n");
+                printf("'ring' deve estar entre 000 e 999, e 'id' deve estar entre 00 e 99.\n");
+            } else {
+                ring = atoi(ring_str);
+                id = atoi(id_str);
+                node = join(ring, id, IP, TCP_escolhido);
+                if(node != NULL) {
+                    node->ring = ring; // Para depois poder usar a corda
+                }
+            }
+        }else if (strncmp(command, "dj", 2) == 0) {
             int id, succid;
             char succIP[16], succTCP[6];
-            sscanf(command, "dj %d %d %s %s", &id, &succid, succIP, succTCP);
-            node = direct_join(id, succid, succIP, succTCP);
+            int num_args = sscanf(command, "dj %d %d %s %s", &id, &succid, succIP, succTCP);
+            // Verifica se todos os 4 parâmetros foram fornecidos
+            if (num_args < 4) {
+                printf("Erro: Não foram fornecidos argumentos suficientes para o comando 'dj'.\n");
+                printf("Uso: dj <id> <succid> <succIP> <succTCP>\n");
+            } else {
+                node = direct_join(id, succid, succIP, succTCP);
+            }
         } else if (strncmp(command, "c", 1) == 0) {
-        // Implementação do comando 'c'
+            if (node == NULL) {
+                printf("Nó não inicializado. Por favor, inicialize o nó antes de tentar estabelecer uma corda.\n");
+            } else if (node->corda != NULL) {
+                printf("O nó já tem uma corda ativa. Por favor, remova a corda existente antes de tentar estabelecer uma nova.\n");
+            } else {
+                establishChord(node);
+                acumula_routes(node->corda_socket_fd, node, tabela_curtos);
+            }
         } else if (strncmp(command, "rc", 2) == 0) {
-        // Implementação do comando 'rc'
+            // Implementação do comando 'rc'
+            if (node != NULL) { 
+                elimina_no(new_socket_pred,new_socket_suc ,node->id, node->corda->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+                removeChord(node);
+            } else {
+                printf("Nenhum nó para remover a corda.\n");
+            }
         } else if (strncmp(command, "st", 2) == 0) {
             sscanf(command, "st");
             if (node != NULL) {
@@ -207,7 +286,6 @@ int main(int argc, char *argv[]) {
         } else if (strncmp(command, "sr", 2) == 0) {
             sscanf(command, "sr %d", &id);
             imprimir_encaminhamento(id,tabela_encaminhamento);
-
         } else if (strncmp(command, "sp", 2) == 0) {
             sscanf(command, "sp %d", &id);
             printf("O caminho para %d é: %s\n",id,tabela_curtos[id][1]);
@@ -215,7 +293,17 @@ int main(int argc, char *argv[]) {
             // Mostra a tabela de expedicao
             imprimir_expedicao(tabela_expedicao);
         } else if (strncmp(command, "m", 1) == 0) {
-            // Implementação do comando 'm'
+            // Verifica se o nó existe
+            if (node == NULL) {
+                printf("Erro: Nó não inicializado.\n");
+            } else {
+                int dest;
+                char message[128];
+                // Extrai o destino e a mensagem do comando
+                sscanf(command, "m %02d %[^\n]", &dest, message);
+                // Envia a mensagem
+                send_chat(new_socket_suc, node, dest, message);
+            }
         } else if (strncmp(command, "NODES", 5) == 0) {
             sscanf(command, "NODES %03d", &ring);
             nodeslist(ring);
@@ -237,13 +325,9 @@ int main(int argc, char *argv[]) {
                 exit(EXIT_FAILURE);
             }
 
-            // Nova conexão, socket fd é %d, ip é: %s, port: %d
-            printf("Olá servidor, o meu socket fd é %d, ip is : %s, port : %d\n", new_socket_temp, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-
             // Atualiza new_socket após todas as verificações do loop for
             if (new_socket_temp != -1) {
             new_socket = new_socket_temp;
-            printf("Valor de new_socket atualizado para: %d\n", new_socket);
             }
 
             // Conversão de inteiro para char
@@ -255,10 +339,33 @@ int main(int argc, char *argv[]) {
             // Lê uma mensagem do socket
             char buffer[1024];
             int valread;
-            if ((valread = recv(new_socket, buffer, sizeof(buffer), 0)) > 0) {
+            if ((valread = read(new_socket, buffer, sizeof(buffer))) > 0) {
                 buffer[valread] = '\0';
-                printf("Mensagem recebida: %s\n", buffer);  // Imprime a mensagem recebida
+                if (DEBUG) {
+                    printf("Mensagem recebida: %s\n", buffer);
+                }
 
+
+                  // Verifica se é uma mensagem de corda
+                    if (strncmp(buffer, "CHORD", 5) == 0) {
+                        int new_id;
+                        
+                        // Analisa a mensagem CHORD
+                        sscanf(buffer, "CHORD %d", &new_id);
+                                                    
+                        // Cria um novo nó para a corda
+                        Node* new_node = createNode(new_id, inet_ntoa(address.sin_addr), port_char);
+
+                        // Adiciona o nó à lista de nós recebidos do servidor (cordas)
+                        add_client(new_socket, new_node);
+                        
+                        printf("O nó %02d conseguiu estabelecer uma corda consigo de forma bem-sucedida.\n", new_id);
+
+                        acumula_routes(new_socket, node, tabela_curtos);
+
+                        temos_corda++;  // Incrementa o número de cordas
+                    }
+                
                 // Verifica se é uma mensagem de entrada
                 if (strncmp(buffer, "ENTRY", 5) == 0) {
                     int new_id;
@@ -268,13 +375,8 @@ int main(int argc, char *argv[]) {
                     // Analisa a mensagem ENTRY
                     sscanf(buffer, "ENTRY %d %s %s", &new_id, new_ip, new_port);
                                             
-                    // Imprime as informações do novo nó
-                    printf("Informações de um novo cliente: id=%02d, ip=%s, port=%s\n", new_id, new_ip, new_port);
-
                     //Se está a entrar o segundo nó
-                    if(node->sucessor->id==node->id){
-
-                        printf("----ESTAVA SOZINHO---");
+                    if(node->sucessor==node){
 
                         node->predecessor = createNode(new_id, new_ip, new_port);
                         node->sucessor = createNode(new_id, new_ip, new_port);
@@ -348,19 +450,22 @@ int main(int argc, char *argv[]) {
                         temos_suc=1;
 
                     }
-
                 }
                 
                 // Verifica se é uma mensagem PRED
                 if (strncmp(buffer, "PRED", 4) == 0) {
-                    //  printf("\nENTREI NO PRED\n");
+                    if (DEBUG) {
+                     printf("\nENTREI NO PRED\n");
+                    }
                     int new_id,i;
                     
                     // Analisa a mensagem PRED
                     sscanf(buffer, "PRED %d", &new_id);
                                             
                     // Informa o seu sucessor sobre a sua identidade.
+                    if (DEBUG) {
                     printf("Informações do : id=%02d\n", new_id);
+                    }
 
                     //Criar um novo nó
                     node->predecessor = createNode(new_id, inet_ntoa(address.sin_addr), port_char);
@@ -408,8 +513,7 @@ int main(int argc, char *argv[]) {
                     }
 
                 }
-            }
-
+             }
         }
 
         if(temos_pred==1){
@@ -417,9 +521,36 @@ int main(int argc, char *argv[]) {
                 char buffer[1024];
                 int valread;
                 if ((valread = read(new_socket_pred, buffer,1024 - 1)) > 0) {
+                    if (DEBUG) {
                     printf("\nVOU LER A MENSAGEM DO MEU PRED\n");
+                    }
                     buffer[valread] = '\0';
+                    if (DEBUG) {
                     printf("Mensagem recebida: %s\n", buffer);  // Imprime a mensagem recebida
+                    }
+
+                    // Verfica se é uma mensagem de chat
+                    if (strncmp(buffer, "CHAT", 4) == 0) {
+                        // Verificar se a mensagem é para o meu nó.
+                        int orig;
+                        int dest;
+                        char message[512];
+                        sscanf(buffer, "CHAT %02d %02d %s", &orig, &dest, message);
+
+                        // Para conseguir ler a mensagem mesmo com espaços
+                        char* message_start = strchr(buffer + 9, ' ');
+                        if (message_start != NULL) {
+                            strncpy(message, message_start + 1, 512);
+                            message[511] = '\0';  // Garante que a mensagem é null-terminated
+                        }
+
+                        if (dest == node->id) {
+                            printf("Mensagem recebida do nó %02d: %s\n", orig, message);
+                        } else {
+                            // Encaminhar a mensagem
+                            
+                        }
+                    }
 
                     if (strncmp(buffer, "ROUTE", 5) == 0){
                         //Analisa mensagens ROUTE
@@ -437,10 +568,11 @@ int main(int argc, char *argv[]) {
                                 if (numero==3){
                                     elimina_no(new_socket_pred,new_socket_suc ,node->id, destination, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
                                 }else if (numero ==4){
-                                    printf("\n");
-                                    update_tabelas(-1,mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
+                                    int auxiliar =0;
+                                    update_tabelas(auxiliar,mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                                 }
                             }
+
                             // Get the next line from the buffer
                             line = strtok(NULL, "\n");
                         }
@@ -448,16 +580,20 @@ int main(int argc, char *argv[]) {
                     }
 
                 }else{
+                    if (DEBUG) {
                     printf("\nO meu predecessor saiu\n");
+                    }
                     pred_saiu=1;
                     close(new_socket_pred);
                     temos_pred=-1;
                     new_socket_pred=-1;
 
+                    
                     sprintf(buffer, "ROUTE %d %d\n", node->id, node->predecessor->id);
                     send_route(new_socket_suc,buffer);
 
                     elimina_no(-1,new_socket_suc ,node->id, node->sucessor->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+
 
                     //ele aqui pode sempre definir o predecessor como ele propria porque caso havia 2 nós, fica certo
                     //caso havia mais que 2 nós ele há de receber um pred e atualizar
@@ -470,13 +606,14 @@ int main(int argc, char *argv[]) {
         if(temos_suc==1){
 
             if (FD_ISSET(new_socket_suc, &readfds)){
-                printf("\n----------------ENTROU AQUI NO FD ISSET DO SUCESSOR---------------------\n");
                 char buffer[1024];
                 int valread;
                 if ((valread = read(new_socket_suc, buffer,1024 - 1)) > 0) { // subtract 1 for the null terminator at the end
                               
                     buffer[valread] = '\0';
+                    if (DEBUG) {
                     printf("Mensagem recebida: %s\n", buffer);  // Imprime a mensagem recebida
+                    }
 
                     // Verifica se é uma mensagem de entrada
                     if (strncmp(buffer, "ENTRY", 5) == 0) {
@@ -493,7 +630,9 @@ int main(int argc, char *argv[]) {
                         sscanf(buffer, "ENTRY %d %s %s", &new_id, new_ip, new_port);
                                                 
                         // Imprime as informações do novo nó
+                        if (DEBUG) {
                         printf("Informações de um novo cliente: id=%02d, ip=%s, port=%s\n", new_id, new_ip, new_port);
+                        }
 
                         elimina_vizinho(new_socket_pred, node->id, node->sucessor, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
 
@@ -528,7 +667,9 @@ int main(int argc, char *argv[]) {
                         sscanf(buffer, "SUCC %d %s %s", &new_id, new_ip, new_port);
                                                 
                         // Informa o seu sucessor sobre a sua identidade.
+                        if (DEBUG) {
                         printf("Informações do segundo sucessor: id=%02d, ip=%s, port=%s\n", new_id, new_ip, new_port);
+                        }
 
                         //Criar um novo nó
                         node->second_successor = createNode(new_id, new_ip, new_port);
@@ -560,17 +701,26 @@ int main(int argc, char *argv[]) {
                         
                     }
                 }else{
+                    if (DEBUG) {
                     printf("\nO meu sucessor saiu\n");
+                    }
                     //fecha a adjacencia
                     close(new_socket_suc);
                     temos_suc=-1;
                     new_socket_suc=-1;
 
                     sprintf(buffer, "ROUTE %d %d\n", node->id, node->sucessor->id);
-                    send_route(new_socket_pred,buffer);
 
-                    elimina_no(new_socket_pred,-1 ,node->id, node->sucessor->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+                    if (temos_pred==1){
+                        send_route(new_socket_pred,buffer);
+                        elimina_no(new_socket_pred,-1 ,node->id, node->sucessor->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
 
+                    }else{
+                        elimina_no(-1,-1 ,node->id, node->sucessor->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+
+                    }
+
+                    
                     //define o novo sucessor como o antigo segundo sucessor
                     node->sucessor=node->second_successor;
 
@@ -590,6 +740,33 @@ int main(int argc, char *argv[]) {
                     }
 
                 }     
+            }
+        }
+
+        // Verifica se há atividade no socket das cordas recebidas
+        if(temos_corda > 0){
+            for (int i = 0; i < MAX_CLIENTS; i++) {
+                if (clients[i] && FD_ISSET(clients[i]->socket_fd, &readfds)) {
+                    int valread;
+                    char buffer[1024];
+                    if ((valread = read(clients[i]->socket_fd, buffer, sizeof(buffer))) == 0) {
+                        if (DEBUG) {
+                            printf("Host disconnected, id %d, ip %s, port %s\n", clients[i]->node->id, clients[i]->node->ip, clients[i]->node->tcp);
+                        }
+                        printf("\nA corda do nó %02d desconectou-se\n", clients[i]->node->id);
+
+                        
+                        elimina_no(new_socket_pred,new_socket_suc ,node->id, clients[i]->node->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+
+                        int temp_socket_fd = clients[i]->socket_fd;
+                        close(temp_socket_fd);  // Feche o socket antes de chamar remove_client
+                        remove_client(temp_socket_fd);  
+                        temos_corda--;  // Decrementa o número de cordas
+                    } else {
+                        buffer[valread] = '\0';
+                        printf("Mensagem recebida: %s\n", buffer);
+                    }
+                }
             }
         }
     }
