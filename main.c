@@ -437,6 +437,7 @@ int main(int argc, char *argv[]) {
                                 if (numero==3){
                                     elimina_no(new_socket_pred,new_socket_suc ,node->id, destination, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
                                 }else if (numero ==4){
+                                    printf("\n");
                                     update_tabelas(-1,mensagens_guardadas,temos_pred,new_socket_pred, new_socket_suc, node, tabela_encaminhamento, tabela_curtos, tabela_expedicao, source, destination, path);
                                 }
                             }
