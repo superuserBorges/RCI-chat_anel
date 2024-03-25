@@ -200,7 +200,7 @@ void elimina_vizinho(int fd, int id, Node* node,char tabela_encaminhamento[101][
                 strcpy(tabela_curtos[i-1][1],tempor);
 
                 //manda para os vizinhos exceto o que entrou agora
-                sprintf(buffer, "ROUTE %d %d %s", id, i-1, tempor);
+                sprintf(buffer, "ROUTE %d %d %s\n", id, i-1, tempor);
                 send_route(fd, buffer);
 
                 sprintf(viz, "%d", vizinho);
@@ -209,7 +209,7 @@ void elimina_vizinho(int fd, int id, Node* node,char tabela_encaminhamento[101][
                 strcpy(tabela_curtos[i-1][1],tempor);
 
                 //manda para os vizinhos exceto o que entrou agora
-                sprintf(buffer, "ROUTE %d %d %s", id, i-1, tempor);
+                sprintf(buffer, "ROUTE %d %d %s\n", id, i-1, tempor);
                 send_route(fd, buffer);
 
                 sprintf(viz, "%d", vizinho);
@@ -263,7 +263,7 @@ void elimina_no(int socket_pred, int socket_suc, int meu_id, int id_saida,char t
                 strcpy(tabela_curtos[i-1][1],tempor);
 
                 //manda para os vizinhos exceto o que entrou agora
-                sprintf(buffer, "ROUTE %d %d %s", meu_id, i-1, tempor);
+                sprintf(buffer, "ROUTE %d %d %s\n", meu_id, i-1, tempor);
                 if(socket_pred!=-1){
                     send_route(socket_pred, buffer);
                 }
@@ -277,7 +277,7 @@ void elimina_no(int socket_pred, int socket_suc, int meu_id, int id_saida,char t
                 strcpy(tabela_curtos[i-1][1],tempor);
 
                 //manda para os vizinhos exceto o que entrou agora
-                sprintf(buffer, "ROUTE %d %d %s", meu_id, i-1, tempor);
+                sprintf(buffer, "ROUTE %d %d %s\n", meu_id, i-1, tempor);
                 if(socket_pred!=-1){
                     send_route(socket_pred, buffer);
                 }
