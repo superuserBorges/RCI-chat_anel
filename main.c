@@ -210,19 +210,24 @@ int main(int argc, char *argv[]) {
             sscanf(command, "l %d", &ring);
             if (node != NULL) {
                 leave(node, ring);
-                close(new_socket_pred);
-                close(new_socket_suc);
+                if(temos_pred==1){
+                    close(new_socket_pred);
+                    new_socket_pred=-1;
+                    temos_pred=-1;
+                }
+                if(temos_suc==1){
+                    close(new_socket_suc);
+                    new_socket_suc=-1;
+                    temos_suc=-1;
+                }
                 if (node->corda != NULL) {
-                // Fecha o socket
-                close(node->corda->corda_socket_fd);
-                // Libera a memória do nó da corda
-                free(node->corda);
-                node->corda = NULL;
-                temos_corda=0;}
-                new_socket_pred=-1;
-                new_socket_suc=-1;
-                temos_pred=-1;
-                temos_suc=-1;
+                    // Fecha o socket
+                    close(node->corda->corda_socket_fd);
+                    // Libera a memória do nó da corda
+                    free(node->corda);
+                    node->corda = NULL;
+                    temos_corda=0;
+                }
                 free(node);
                 node = NULL;
             } else {
@@ -590,10 +595,13 @@ int main(int argc, char *argv[]) {
 
                     
                     sprintf(buffer, "ROUTE %d %d\n", node->id, node->predecessor->id);
-                    send_route(new_socket_suc,buffer);
+                    if(temos_suc==1){  
+                        send_route(new_socket_suc,buffer);
 
-                    elimina_no(-1,new_socket_suc ,node->id, node->sucessor->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
-
+                        elimina_no(-1,new_socket_suc ,node->id, node->sucessor->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+                    }else{
+                        elimina_no(-1,-1 ,node->id, node->sucessor->id, tabela_encaminhamento,tabela_curtos,tabela_expedicao);
+                    }
 
                     //ele aqui pode sempre definir o predecessor como ele propria porque caso havia 2 nós, fica certo
                     //caso havia mais que 2 nós ele há de receber um pred e atualizar
